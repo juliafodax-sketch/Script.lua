@@ -1,0 +1,324 @@
+--[[ 
+    NOTICAX V1 - LOADING EDITION
+    - Tela de Loading (Start Screen)
+    - Menu Noticax v1
+    - Voo + Aura + Animação God Mode
+]]
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- --- PROTEÇÃO (Auto-Detect) ---
+local function getGuiParent()
+    local success, parent = pcall(function() return gethui() end)
+    if success and parent then return parent end
+    success, parent = pcall(function() return game:GetService("CoreGui") end)
+    if success and parent then return parent end
+    return Player:WaitForChild("PlayerGui")
+end
+
+local oldGui = getGuiParent():FindFirstChild("Noticax_v1_Load")
+if oldGui then oldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Noticax_v1_Load"
+ScreenGui.Parent = getGuiParent()
+ScreenGui.ResetOnSpawn = false
+
+-- Variáveis do Voo
+local flySpeed = 50
+local flying = false
+local bv, bg
+local activeParticles
+local animTrack 
+local FLY_ANIM_ID = "rbxassetid://616006778" 
+
+-- ==========================================
+-- SISTEMA DE LOADING (CARREGAMENTO)
+-- ==========================================
+
+local LoadingFrame = Instance.new("Frame", ScreenGui)
+LoadingFrame.Size = UDim2.new(0, 220, 0, 120)
+LoadingFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+LoadingFrame.BorderSizePixel = 0
+LoadingFrame.Visible = true
+Instance.new("UICorner", LoadingFrame).CornerRadius = UDim.new(0, 10)
+
+-- Borda RGB do Loading
+local LoadStroke = Instance.new("UIStroke", LoadingFrame)
+LoadStroke.Thickness = 2
+spawn(function()
+    while LoadingFrame.Parent do -- Só roda enquanto o loading existir
+        local hue = tick() % 5 / 5
+        LoadStroke.Color = Color3.fromHSV(hue, 1, 1)
+        task.wait()
+    end
+end)
+
+local LoadTitle = Instance.new("TextLabel", LoadingFrame)
+LoadTitle.Text = "Noticax v1"
+LoadTitle.Size = UDim2.new(1, 0, 0, 40)
+LoadTitle.BackgroundTransparency = 1
+LoadTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadTitle.Font = Enum.Font.GothamBlack
+LoadTitle.TextSize = 20
+
+local LoadStatus = Instance.new("TextLabel", LoadingFrame)
+LoadStatus.Text = "Carregando Scripts..."
+LoadStatus.Position = UDim2.new(0, 0, 0, 85)
+LoadStatus.Size = UDim2.new(1, 0, 0, 20)
+LoadStatus.BackgroundTransparency = 1
+LoadStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
+LoadStatus.Font = Enum.Font.Gotham
+LoadStatus.TextSize = 12
+
+-- Barra de Fundo
+local BarBack = Instance.new("Frame", LoadingFrame)
+BarBack.Size = UDim2.new(0, 180, 0, 6)
+BarBack.Position = UDim2.new(0, 20, 0, 60)
+BarBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+BarBack.BorderSizePixel = 0
+Instance.new("UICorner", BarBack).CornerRadius = UDim.new(1, 0)
+
+-- Barra que enche
+local BarFill = Instance.new("Frame", BarBack)
+BarFill.Size = UDim2.new(0, 0, 1, 0) -- Começa vazia
+BarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 255) -- Ciano
+BarFill.BorderSizePixel = 0
+Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
+
+-- ==========================================
+-- MENU PRINCIPAL (Vem depois do Loading)
+-- ==========================================
+
+-- Botão M (Escondido no começo)
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Name = "OpenButton"
+ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleBtn.Position = UDim2.new(0.85, 0, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.Text = "M"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBlack
+ToggleBtn.TextSize = 18
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Visible = false -- ESCONDIDO
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 10)
+local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
+ToggleStroke.Thickness = 2
+ToggleStroke.Color = Color3.fromRGB(0, 255, 255)
+
+-- Painel Principal (Escondido no começo)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 250, 0, 310)
+MainFrame.Position = UDim2.new(0.5, -125, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false -- ESCONDIDO
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Thickness = 3
+
+spawn(function()
+    while task.wait() do
+        local hue = tick() % 5 / 5
+        local color = Color3.fromHSV(hue, 1, 1)
+        MainStroke.Color = color
+        ToggleStroke.Color = color
+    end
+end)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "Noticax v1"
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 22
+
+local CloseX = Instance.new("TextButton", MainFrame)
+CloseX.Text = "X"
+CloseX.Size = UDim2.new(0, 30, 0, 30)
+CloseX.Position = UDim2.new(1, -35, 0, 5)
+CloseX.BackgroundTransparency = 1
+CloseX.TextColor3 = Color3.fromRGB(255, 50, 50)
+CloseX.Font = Enum.Font.GothamBold
+CloseX.TextSize = 16
+
+local Warning = Instance.new("TextLabel", MainFrame)
+Warning.Text = "⚠️ AVISO: Versão Beta. Pode conter erros/bugs durante o uso."
+Warning.Size = UDim2.new(0, 230, 0, 40)
+Warning.Position = UDim2.new(0, 10, 0, 40)
+Warning.BackgroundTransparency = 1
+Warning.TextColor3 = Color3.fromRGB(255, 200, 0)
+Warning.TextWrapped = true
+Warning.TextSize = 11
+Warning.Font = Enum.Font.Gotham
+
+-- Função Aura
+local function createMegaAura(rootPart)
+    local att = Instance.new("Attachment", rootPart)
+    local p1 = Instance.new("ParticleEmitter", att)
+    p1.Texture = "rbxassetid://243098098"
+    p1.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 3), NumberSequenceKeypoint.new(1, 0)})
+    p1.Rate = 120 
+    p1.Lifetime = NumberRange.new(0.5, 0.8)
+    p1.Speed = NumberRange.new(2)
+    p1.Color = ColorSequence.new(Color3.fromRGB(0, 255, 255), Color3.fromRGB(0, 100, 255))
+    p1.LightEmission = 1
+    p1.Transparency = NumberSequence.new(0.3, 1)
+    local p2 = Instance.new("ParticleEmitter", att)
+    p2.Texture = "rbxassetid://242205514"
+    p2.Size = NumberSequence.new(0.5, 1.5)
+    p2.Rate = 60
+    p2.Lifetime = NumberRange.new(0.3, 0.6)
+    p2.Speed = NumberRange.new(12)
+    p2.SpreadAngle = Vector2.new(360, 360)
+    p2.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+    p2.LightEmission = 1
+    return att
+end
+
+-- Botões
+local function makeButton(text, yPos, color)
+    local btn = Instance.new("TextButton", MainFrame)
+    btn.Text = text
+    btn.Size = UDim2.new(0, 210, 0, 45)
+    btn.Position = UDim2.new(0, 20, 0, yPos)
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.AutoButtonColor = true
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    return btn
+end
+
+local FlyBtn = makeButton("ATIVAR VOO", 85, Color3.fromRGB(30, 30, 30))
+local SpeedUp = makeButton("AUMENTAR VELOCIDADE", 140, Color3.fromRGB(0, 100, 50))
+local SpeedDown = makeButton("DIMINUIR VELOCIDADE", 195, Color3.fromRGB(100, 0, 0))
+local SpeedLabel = Instance.new("TextLabel", MainFrame)
+SpeedLabel.Text = "Velocidade: " .. flySpeed
+SpeedLabel.Size = UDim2.new(1, 0, 0, 30)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 250)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedLabel.Font = Enum.Font.GothamBold
+
+-- --- LÓGICA DO VOO ---
+
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseX.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+
+FlyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChild("Humanoid")
+    local animator = humanoid:FindFirstChild("Animator") or Instance.new("Animator", humanoid)
+    
+    if not root or not humanoid then return end
+
+    if flying then
+        FlyBtn.Text = "GOD MODE (ON)"
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        local anim = Instance.new("Animation")
+        anim.AnimationId = FLY_ANIM_ID
+        animTrack = animator:LoadAnimation(anim)
+        animTrack.Priority = Enum.AnimationPriority.Action4
+        animTrack.Looped = true
+        animTrack:Play(0.5) 
+        activeParticles = createMegaAura(root)
+        bv = Instance.new("BodyVelocity", root)
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bg = Instance.new("BodyGyro", root)
+        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bg.P = 20000
+        spawn(function()
+            while flying and humanoid.Health > 0 do
+                local moveDir = humanoid.MoveDirection
+                local look = Camera.CFrame.LookVector
+                local right = Camera.CFrame.RightVector
+                bg.CFrame = Camera.CFrame
+                if moveDir.Magnitude > 0 then
+                    local flatLook = (look * Vector3.new(1,0,1)).Unit
+                    if flatLook.X ~= flatLook.X then flatLook = Vector3.new(0,0,-1) end
+                    local forwardStr = moveDir:Dot(flatLook)
+                    local sideStr = moveDir:Dot(right)
+                    local finalVel = (look * forwardStr + right * sideStr)
+                    bv.Velocity = finalVel * flySpeed
+                else
+                    bv.Velocity = Vector3.new(0,0,0)
+                end
+                task.wait()
+            end
+            if flying then
+                flying = false
+                FlyBtn.Text = "ATIVAR VOO"
+                FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            end
+            if animTrack then animTrack:Stop(0.5) animTrack:Destroy() end
+            if activeParticles then activeParticles:Destroy() end
+            if bv then bv:Destroy() end
+            if bg then bg:Destroy() end
+        end)
+    else
+        FlyBtn.Text = "ATIVAR VOO"
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        if animTrack then animTrack:Stop(0.5) animTrack:Destroy() end
+        if activeParticles then activeParticles:Destroy() end
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
+    end
+end)
+
+SpeedUp.MouseButton1Click:Connect(function()
+    flySpeed = flySpeed + 10
+    SpeedLabel.Text = "Velocidade: " .. flySpeed
+end)
+
+SpeedDown.MouseButton1Click:Connect(function()
+    flySpeed = math.max(10, flySpeed - 10)
+    SpeedLabel.Text = "Velocidade: " .. flySpeed
+end)
+
+Player.CharacterAdded:Connect(function()
+    flying = false
+    FlyBtn.Text = "ATIVAR VOO"
+    if activeParticles then activeParticles:Destroy() end
+    if animTrack then animTrack:Stop() animTrack:Destroy() end
+end)
+
+-- ==========================================
+-- EXECUÇÃO DO LOADING
+-- ==========================================
+spawn(function()
+    -- Animação da Barra
+    LoadStatus.Text = "Iniciando..."
+    wait(0.5)
+    BarFill:TweenSize(UDim2.new(0.3, 0, 1, 0), "Out", "Quad", 1)
+    LoadStatus.Text = "Verificando Jogo..."
+    wait(1)
+    BarFill:TweenSize(UDim2.new(0.7, 0, 1, 0), "Out", "Quad", 1)
+    LoadStatus.Text = "Carregando Noticax v1..."
+    wait(1.5)
+    BarFill:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 0.5)
+    LoadStatus.Text = "Sucesso!"
+    wait(0.5)
+    
+    -- Some com o Loading
+    LoadingFrame:TweenPosition(UDim2.new(0.5, -110, 1.5, 0), "In", "Back", 1)
+    wait(1)
+    LoadingFrame:Destroy()
+    
+    -- Mostra o Menu Principal
+    MainFrame.Visible = true
+    ToggleBtn.Visible = true
+end)
+
