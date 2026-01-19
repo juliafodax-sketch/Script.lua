@@ -1,99 +1,152 @@
--- [[ SISTEMA DE MANUTENÇÃO NOTICAX - 7 HORAS ]] --
+-- [[ NOTICAX PROFESSIONAL MAINTENANCE SYSTEM ]] --
 
-local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
 
--- 1. Notificação de Alerta
+-- 1. Notificação de Sistema
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "Noticax v1";
-        Text = "Script em manutenção temporária.";
-        Duration = 10;
+        Title = "System Update";
+        Text = "Conectando ao servidor de manutenção...";
+        Duration = 5;
     })
 end)
 
--- 2. Criar Tela de Bloqueio
+-- 2. Criação da UI (Interface)
 local ScreenGui = Instance.new("ScreenGui")
+local Blur = Instance.new("BlurEffect") -- Efeito de Desfoque
 local MainFrame = Instance.new("Frame")
+local Corner = Instance.new("UICorner")
+local Stroke = Instance.new("UIStroke") -- Borda profissional
 local Title = Instance.new("TextLabel")
+local Icon = Instance.new("ImageLabel")
 local Description = Instance.new("TextLabel")
 local TimerLabel = Instance.new("TextLabel")
-local CreditLabel = Instance.new("TextLabel")
+local ProgressBarBg = Instance.new("Frame")
+local ProgressBarFill = Instance.new("Frame")
+local Footer = Instance.new("TextLabel")
 
--- Tenta proteger na CoreGui (se o executor permitir), senão usa PlayerGui
+-- Configuração da Proteção (CoreGui vs PlayerGui)
 local success, parent = pcall(function() return game:GetService("CoreGui") end)
 if not success then parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
-ScreenGui.Parent = parent
-ScreenGui.Name = "NoticaxMaintenance"
-ScreenGui.IgnoreGuiInset = true -- Cobre a tela toda (até a barra superior)
 
--- Fundo Preto
+ScreenGui.Name = "Noticax_Maintenance_Pro"
+ScreenGui.Parent = parent
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+
+-- Configura o Blur (Desfoque no jogo)
+Blur.Parent = Lighting
+Blur.Size = 24
+
+-- Fundo Escuro Transparente (Overlay)
+local Overlay = Instance.new("Frame", ScreenGui)
+Overlay.Size = UDim2.new(1, 0, 1, 0)
+Overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+Overlay.BackgroundTransparency = 0.3
+Overlay.Active = true -- Bloqueia cliques no jogo
+
+-- Janela Principal
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-MainFrame.Size = UDim2.new(1, 0, 1, 0)
-MainFrame.Active = true -- Impede clicar no jogo
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.Size = UDim2.new(0, 500, 0, 300) -- Tamanho fixo para ficar bonito em PC e Celular
+-- Ajuste para celular muito pequeno se necessário
+if workspace.CurrentCamera.ViewportSize.X < 500 then
+    MainFrame.Size = UDim2.new(0.9, 0, 0.4, 0)
+end
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+
+-- Arredondamento e Borda
+Corner.Parent = MainFrame
+Corner.CornerRadius = UDim.new(0, 12)
+
+Stroke.Parent = MainFrame
+Stroke.Color = Color3.fromRGB(60, 60, 60)
+Stroke.Thickness = 1
 
 -- Título
 Title.Parent = MainFrame
 Title.BackgroundTransparency = 1
-Title.Position = UDim2.new(0, 0, 0.2, 0)
-Title.Size = UDim2.new(1, 0, 0.1, 0)
+Title.Position = UDim2.new(0, 0, 0.1, 0)
+Title.Size = UDim2.new(1, 0, 0.15, 0)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "⚠️ MANUTENÇÃO NOTICAX ⚠️"
-Title.TextColor3 = Color3.fromRGB(255, 60, 60) -- Vermelho
-Title.TextSize = 32
+Title.Text = "MANUTENÇÃO PROGRAMADA"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 24
 
--- Explicação (O motivo que você pediu)
+-- Descrição
 Description.Parent = MainFrame
 Description.BackgroundTransparency = 1
-Description.Position = UDim2.new(0.1, 0, 0.35, 0)
+Description.Position = UDim2.new(0.1, 0, 0.3, 0)
 Description.Size = UDim2.new(0.8, 0, 0.2, 0)
 Description.Font = Enum.Font.Gotham
-Description.TextColor3 = Color3.fromRGB(200, 200, 200)
-Description.TextSize = 18
+Description.Text = "O sistema Noticax v1 está passando por uma atualização crítica de infraestrutura e correções de segurança."
+Description.TextColor3 = Color3.fromRGB(180, 180, 180)
+Description.TextSize = 16
 Description.TextWrapped = true
-Description.Text = "Estamos atualizando o sistema para corrigir bugs e adicionar novas funções.\n\nO script foi bloqueado temporariamente para sua segurança.\nPor favor, aguarde o tempo restante."
 
--- Cronômetro (Time de 7 Horas)
+-- Timer (Destaque)
 TimerLabel.Parent = MainFrame
 TimerLabel.BackgroundTransparency = 1
-TimerLabel.Position = UDim2.new(0, 0, 0.6, 0)
-TimerLabel.Size = UDim2.new(1, 0, 0.1, 0)
+TimerLabel.Position = UDim2.new(0, 0, 0.55, 0)
+TimerLabel.Size = UDim2.new(1, 0, 0.15, 0)
 TimerLabel.Font = Enum.Font.GothamBlack
-TimerLabel.TextColor3 = Color3.fromRGB(255, 170, 0) -- Laranja
-TimerLabel.TextSize = 40
 TimerLabel.Text = "07:00:00"
+TimerLabel.TextColor3 = Color3.fromRGB(80, 160, 255) -- Azul Neon Profissional
+TimerLabel.TextSize = 36
 
-CreditLabel.Parent = MainFrame
-CreditLabel.BackgroundTransparency = 1
-CreditLabel.Position = UDim2.new(0, 0, 0.9, 0)
-CreditLabel.Size = UDim2.new(1, 0, 0.05, 0)
-CreditLabel.Font = Enum.Font.Gotham
-CreditLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-CreditLabel.TextSize = 14
-CreditLabel.Text = "Equipe Noticax Dev"
+-- Barra de Progresso (Visual)
+ProgressBarBg.Parent = MainFrame
+ProgressBarBg.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+ProgressBarBg.BorderSizePixel = 0
+ProgressBarBg.Position = UDim2.new(0.1, 0, 0.75, 0)
+ProgressBarBg.Size = UDim2.new(0.8, 0, 0.02, 0)
+Instance.new("UICorner", ProgressBarBg).CornerRadius = UDim.new(1, 0)
 
--- 3. Lógica do Tempo (7 Horas)
-local TotalSeconds = 7 * 3600 -- 7 horas em segundos
+ProgressBarFill.Parent = ProgressBarBg
+ProgressBarFill.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+ProgressBarFill.BorderSizePixel = 0
+ProgressBarFill.Size = UDim2.new(0.1, 0, 1, 0) -- Começa pequeno
+Instance.new("UICorner", ProgressBarFill).CornerRadius = UDim.new(1, 0)
 
+-- Rodapé
+Footer.Parent = MainFrame
+Footer.BackgroundTransparency = 1
+Footer.Position = UDim2.new(0, 0, 0.85, 0)
+Footer.Size = UDim2.new(1, 0, 0.1, 0)
+Footer.Font = Enum.Font.SourceSans
+Footer.Text = "Noticax Development Team © 2024"
+Footer.TextColor3 = Color3.fromRGB(100, 100, 100)
+Footer.TextSize = 14
+
+-- [[ ANIMAÇÕES E LÓGICA ]] --
+
+-- Animação da Barra de Progresso (Loop Infinito chique)
+local TweenInfoBar = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, true)
+local TweenBar = TweenService:Create(ProgressBarFill, TweenInfoBar, {Size = UDim2.new(1, 0, 1, 0)})
+TweenBar:Play()
+
+-- Lógica do Timer (7 Horas)
+local TotalSeconds = 7 * 3600
 spawn(function()
     while TotalSeconds > 0 do
         TotalSeconds = TotalSeconds - 1
         
-        -- Formata o tempo para HH:MM:SS
-        local hours = math.floor(TotalSeconds / 3600)
-        local minutes = math.floor((TotalSeconds % 3600) / 60)
-        local seconds = TotalSeconds % 60
+        local h = math.floor(TotalSeconds / 3600)
+        local m = math.floor((TotalSeconds % 3600) / 60)
+        local s = TotalSeconds % 60
         
-        TimerLabel.Text = string.format("VOLTAMOS EM: %02d:%02d:%02d", hours, minutes, seconds)
-        
+        TimerLabel.Text = string.format("%02d:%02d:%02d", h, m, s)
         wait(1)
     end
-    TimerLabel.Text = "ATUALIZAÇÃO CONCLUÍDA! TENTE REINICIAR."
-    TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    TimerLabel.Text = "UPDATE COMPLETE"
+    TimerLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
 end)
 
--- Bloqueia o resto do script
+-- IMPORTANTE: Bloqueia o carregamento do script real
 return
-
