@@ -1,84 +1,86 @@
--- [[ NOTICAX ULTIMATE RGB MAINTENANCE ]] --
+-- [[ NOTICAX v4 - ULTIMATE RGB MAINTENANCE SYSTEM ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local Lighting = game:GetService("Lighting")
+local ContentProvider = game:GetService("ContentProvider")
 
 -- [[ CONFIGURAÇÕES ]] --
-local TEMPO_HORAS = 24 -- Tempo total
-local MUSIC_ID = "rbxassetid://6802556937" -- Música Chill/Vibe (Pode trocar se quiser)
+local TEMPO_HORAS = 24 -- Tempo do timer
+local MUSIC_ID = "rbxassetid://1837126786" -- Música Lo-fi Chill (ID Testado)
 
--- 1. Notificação Inicial
+-- 1. Notificação
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "Noticax System";
-        Text = "Servidor em manutenção programada.";
-        Duration = 8;
+        Title = "Noticax v4";
+        Text = "Preparando nova atualização...";
+        Duration = 5;
     })
 end)
 
--- 2. Construção da Interface (UI Premium)
+-- 2. Interface (GUI)
 local ScreenGui = Instance.new("ScreenGui")
 local Blur = Instance.new("BlurEffect")
 local MainFrame = Instance.new("Frame")
 local Corner = Instance.new("UICorner")
 local Stroke = Instance.new("UIStroke")
 local Title = Instance.new("TextLabel")
-local SubTitleNewFeature = Instance.new("TextLabel") -- Aviso da novidade
+local VersionTag = Instance.new("TextLabel") -- Tag v4
+local SubTitle = Instance.new("TextLabel")
 local Description = Instance.new("TextLabel")
-local TimerLabel = Instance.new("TextLabel") -- O Timer RGB
+local TimerLabel = Instance.new("TextLabel") -- RGB Timer
 local LoadingIcon = Instance.new("ImageLabel")
 local Footer = Instance.new("TextLabel")
 
--- Tenta CoreGui (Mais seguro), senão usa PlayerGui
+-- Proteção de GUI
 local success, parent = pcall(function() return game:GetService("CoreGui") end)
 if not success then parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
 
-ScreenGui.Name = "Noticax_RGB_Maint"
+ScreenGui.Name = "Noticax_v4_Maintenance"
 ScreenGui.Parent = parent
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ResetOnSpawn = false
 
--- Configuração de Áudio
+-- ÁUDIO (Método Seguro)
 local Sound = Instance.new("Sound")
+Sound.Name = "MaintMusic"
 Sound.SoundId = MUSIC_ID
-Sound.Volume = 1.5
+Sound.Volume = 2
 Sound.Looped = true
-Sound.Parent = ScreenGui
-Sound.Playing = true
+Sound.Parent = ScreenGui -- Colocar na GUI ajuda no mobile
+if not Sound.IsLoaded then Sound.Loaded:Wait() end -- Espera carregar
+Sound:Play()
 
--- Configuração Visual (Blur e Fundo Escuro)
+-- Visual Blur
 Blur.Name = "MaintBlur"
 Blur.Parent = Lighting
-Blur.Size = 25
+Blur.Size = 24
 
+-- Fundo Escuro
 local Overlay = Instance.new("Frame", ScreenGui)
 Overlay.Size = UDim2.new(1, 0, 1, 0)
 Overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-Overlay.BackgroundTransparency = 0.25
+Overlay.BackgroundTransparency = 0.2
 Overlay.Active = true
 
 -- Janela Principal
 MainFrame.Parent = ScreenGui
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.Size = UDim2.new(0, 550, 0, 350)
--- Ajuste para celulares pequenos
-if workspace.CurrentCamera.ViewportSize.X < 550 then
-    MainFrame.Size = UDim2.new(0.9, 0, 0.5, 0)
+MainFrame.Size = UDim2.new(0, 500, 0, 320)
+if workspace.CurrentCamera.ViewportSize.X < 500 then
+    MainFrame.Size = UDim2.new(0.95, 0, 0.5, 0)
 end
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
-
-Corner.CornerRadius = UDim.new(0, 16)
+Corner.CornerRadius = UDim.new(0, 14)
 Corner.Parent = MainFrame
 
--- Borda Neon Azulada
-Stroke.Color = Color3.fromRGB(80, 120, 255)
+-- Borda RGB (Vai mudar de cor depois)
 Stroke.Thickness = 2
-Stroke.Transparency = 0.5
+Stroke.Transparency = 0
 Stroke.Parent = MainFrame
 
 -- Título
@@ -87,93 +89,108 @@ Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0, 0, 0.08, 0)
 Title.Size = UDim2.new(1, 0, 0.15, 0)
 Title.Font = Enum.Font.GothamBlack
-Title.Text = "MANUTENÇÃO GERAL"
+Title.Text = "MANUTENÇÃO DO SISTEMA"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 28
+Title.TextSize = 24
 
--- Subtítulo (O HYPE DA NOVA OPÇÃO)
-SubTitleNewFeature.Parent = MainFrame
-SubTitleNewFeature.BackgroundTransparency = 1
-SubTitleNewFeature.Position = UDim2.new(0, 0, 0.22, 0)
-SubTitleNewFeature.Size = UDim2.new(1, 0, 0.1, 0)
-SubTitleNewFeature.Font = Enum.Font.GothamBold
-SubTitleNewFeature.Text = "✨ PREPARANDO UMA NOVA OPÇÃO SECRETA... ✨"
-SubTitleNewFeature.TextColor3 = Color3.fromRGB(255, 220, 50) -- Amarelo Ouro
-SubTitleNewFeature.TextSize = 16
+-- Tag da Versão (v4)
+VersionTag.Parent = MainFrame
+VersionTag.BackgroundTransparency = 1
+VersionTag.Position = UDim2.new(0.8, 0, 0.08, 0)
+VersionTag.Size = UDim2.new(0.15, 0, 0.1, 0)
+VersionTag.Font = Enum.Font.GothamBlack
+VersionTag.Text = "v4"
+VersionTag.TextColor3 = Color3.fromRGB(255, 50, 50)
+VersionTag.TextSize = 20
+VersionTag.Rotation = 15
+
+-- Subtítulo
+SubTitle.Parent = MainFrame
+SubTitle.BackgroundTransparency = 1
+SubTitle.Position = UDim2.new(0, 0, 0.22, 0)
+SubTitle.Size = UDim2.new(1, 0, 0.1, 0)
+SubTitle.Font = Enum.Font.GothamBold
+SubTitle.Text = "✨ NOVA OPÇÃO SECRETA CHEGANDO ✨"
+SubTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
+SubTitle.TextSize = 14
 
 -- Descrição
 Description.Parent = MainFrame
 Description.BackgroundTransparency = 1
-Description.Position = UDim2.new(0.1, 0, 0.38, 0)
+Description.Position = UDim2.new(0.1, 0, 0.35, 0)
 Description.Size = UDim2.new(0.8, 0, 0.2, 0)
 Description.Font = Enum.Font.GothamMedium
-Description.Text = "Estamos atualizando os servidores e implementando uma função muito pedida. O Noticax v3 voltará ainda mais forte."
+Description.Text = "O Noticax v4 está sendo preparado. Estamos adicionando uma função exclusiva e corrigindo falhas de segurança."
 Description.TextColor3 = Color3.fromRGB(180, 180, 180)
-Description.TextSize = 15
+Description.TextSize = 14
 Description.TextWrapped = true
 
--- O TIMER RGB (O destaque)
+-- TIMER RGB
 TimerLabel.Parent = MainFrame
 TimerLabel.BackgroundTransparency = 1
-TimerLabel.Position = UDim2.new(0, 0, 0.6, 0)
+TimerLabel.Position = UDim2.new(0, 0, 0.55, 0)
 TimerLabel.Size = UDim2.new(1, 0, 0.15, 0)
 TimerLabel.Font = Enum.Font.GothamBlack
 TimerLabel.Text = "24:00:00"
-TimerLabel.TextColor3 = Color3.new(1, 1, 1) -- Começa branco, o script muda depois
-TimerLabel.TextSize = 48
+TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimerLabel.TextSize = 42
 
--- Ícone de Carregamento
+-- Ícone
 LoadingIcon.Parent = MainFrame
 LoadingIcon.BackgroundTransparency = 1
-LoadingCircle.Position = UDim2.new(0.5, -20, 0.8, 0)
-LoadingIcon.Size = UDim2.new(0, 40, 0, 40)
-LoadingIcon.Image = "rbxassetid://3570695787" -- Ícone circular
-LoadingIcon.ImageColor3 = Color3.fromRGB(80, 120, 255)
+LoadingIcon.Position = UDim2.new(0.5, -15, 0.75, 0) -- Centralizado
+LoadingIcon.Size = UDim2.new(0, 30, 0, 30)
+LoadingIcon.Image = "rbxassetid://3570695787"
+LoadingIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 
 -- Footer
 Footer.Parent = MainFrame
 Footer.BackgroundTransparency = 1
-Footer.Position = UDim2.new(0, 0, 0.92, 0)
+Footer.Position = UDim2.new(0, 0, 0.9, 0)
 Footer.Size = UDim2.new(1, 0, 0.05, 0)
-Footer.Font = Enum.Font.SourceSansBold
-Footer.Text = "Noticax Development © 2024"
+Footer.Font = Enum.Font.SourceSansItalic
+Footer.Text = "Aguarde o lançamento oficial da v4..."
 Footer.TextColor3 = Color3.fromRGB(100, 100, 100)
-Footer.TextSize = 12
+Footer.TextSize = 14
 
--- [[ ANIMAÇÕES E EFEITOS ]] --
+-- [[ ANIMAÇÕES E LÓGICA ]] --
 
--- 1. Animação do Ícone Girando
-local SpinTween = TweenService:Create(LoadingIcon, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
-SpinTween:Play()
+-- Gira o ícone
+TweenService:Create(LoadingIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360}):Play()
 
--- 2. Animação de "Respiração" no Subtítulo da Novidade
-local PulseTween = TweenService:Create(SubTitleNewFeature, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {TextTransparency = 0.4})
-PulseTween:Play()
+-- Pisca o Subtítulo
+TweenService:Create(SubTitle, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {TextTransparency = 0.5}):Play()
 
--- 3. EFEITO RGB NO TIMER (Chroma Loop)
-local hue = 0
-RunService.Heartbeat:Connect(function()
-    hue = hue + 0.001 -- Velocidade da mudança de cor
-    if hue > 1 then hue = 0 end
-    TimerLabel.TextColor3 = Color3.fromHSV(hue, 0.8, 1) -- Converte para RGB vibrante
+-- LÓGICA RGB (Arco-íris na Borda e no Timer)
+task.spawn(function()
+    local hue = 0
+    while true do
+        hue = hue + 0.005
+        if hue > 1 then hue = 0 end
+        
+        local color = Color3.fromHSV(hue, 0.8, 1)
+        TimerLabel.TextColor3 = color
+        Stroke.Color = color
+        LoadingIcon.ImageColor3 = color
+        
+        task.wait(0.03) -- Suavidade do RGB
+    end
 end)
 
--- 4. Lógica do Cronômetro (24 Horas)
-local TotalSeconds = TEMPO_HORAS * 3600
-
-spawn(function()
+-- LÓGICA DO TEMPO (Contagem Regressiva)
+task.spawn(function()
+    local TotalSeconds = TEMPO_HORAS * 3600
     while TotalSeconds > 0 do
         TotalSeconds = TotalSeconds - 1
+        
         local h = math.floor(TotalSeconds / 3600)
         local m = math.floor((TotalSeconds % 3600) / 60)
         local s = TotalSeconds % 60
         
         TimerLabel.Text = string.format("%02d:%02d:%02d", h, m, s)
-        wait(1)
+        task.wait(1)
     end
-    TimerLabel.Text = "A NOVA ERA CHEGOU. REINICIE."
+    TimerLabel.Text = "LANÇAMENTO v4 DISPONÍVEL!"
 end)
 
--- IMPORTANTE: Bloqueia o resto do script
 return
-
