@@ -1,149 +1,477 @@
--- [[ NOTICAX v4 - CORREÇÃO DE TELA INVISÍVEL ]] --
+--[[ 
+    NOTICAX V4 - FINAL FIXED EDITION
+    - Nome: Noticax v4 (Mantido)
+    - Fix: ESP parou de piscar (Correção aplicada)
+    - Fix: Highlight AlwaysOnTop (Correção aplicada)
+    - Noclip, Fly, Speed, Loading INTACTOS
+]]
 
 local Players = game:GetService("Players")
-local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-local LocalPlayer = Players.LocalPlayer
--- Espera o PlayerGui existir de verdade antes de tentar colocar algo
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10) 
-
-if not PlayerGui then 
-    warn("PlayerGui não encontrado! Tentando CoreGui...")
-    PlayerGui = game:GetService("CoreGui")
+-- --- PROTEÇÃO (Auto-Detect) ---
+local function getGuiParent()
+    local success, parent = pcall(function() return gethui() end)
+    if success and parent then return parent end
+    success, parent = pcall(function() return game:GetService("CoreGui") end)
+    if success and parent then return parent end
+    return Player:WaitForChild("PlayerGui")
 end
 
--- 1. Limpeza (Remove versões antigas para não bugar)
-for _, v in pairs(PlayerGui:GetChildren()) do
-    if v.Name == "Noticax_Fix_Screen" then v:Destroy() end
-end
-for _, v in pairs(Lighting:GetChildren()) do
-    if v.Name == "NoticaxBlur" then v:Destroy() end
-end
+local oldGui = getGuiParent():FindFirstChild("Noticax_v4")
+if oldGui then oldGui:Destroy() end
 
--- 2. Criação da Interface (Blindada)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Noticax_Fix_Screen"
-ScreenGui.Parent = PlayerGui
-ScreenGui.IgnoreGuiInset = true
+ScreenGui.Name = "Noticax_v4" -- Nome v4
+ScreenGui.Parent = getGuiParent()
 ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 10000 -- [[ FORÇA FICAR NA FRENTE DE TUDO ]]
 
--- Fundo Desfocado (Blur)
-local Blur = Instance.new("BlurEffect")
-Blur.Name = "NoticaxBlur"
-Blur.Size = 24
-Blur.Parent = Lighting
+-- Variáveis Globais
+local flySpeed = 50
+local walkSpeed = 50
+local flying = false
+local speeding = false
+local noclip = false
+local bv, bg
+local activeParticles
+local animTrack 
+local FLY_ANIM_ID = "rbxassetid://616006778" 
 
--- Som
-local Sound = Instance.new("Sound")
-Sound.SoundId = "rbxassetid://1837126786" -- Música Chill
-Sound.Volume = 2
-Sound.Looped = true
-Sound.Parent = ScreenGui
-Sound:Play()
+-- Variáveis ESP
+local espBoxEnabled = false
+local espNameEnabled = false
+local espLinesEnabled = false
 
--- Fundo Preto Transparente
-local Overlay = Instance.new("Frame")
-Overlay.Parent = ScreenGui
-Overlay.Size = UDim2.new(1, 0, 1, 0)
-Overlay.BackgroundColor3 = Color3.new(0,0,0)
-Overlay.BackgroundTransparency = 0.2
+-- ==========================================
+-- 1. TELA DE LOADING (MANTIDA)
+-- ==========================================
+local LoadingFrame = Instance.new("Frame", ScreenGui)
+LoadingFrame.Size = UDim2.new(0, 220, 0, 120)
+LoadingFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+LoadingFrame.BorderSizePixel = 0
+LoadingFrame.Visible = true
+Instance.new("UICorner", LoadingFrame).CornerRadius = UDim.new(0, 10)
+local LoadStroke = Instance.new("UIStroke", LoadingFrame)
+LoadStroke.Thickness = 2
+spawn(function()
+    while LoadingFrame.Parent do 
+        local hue = tick() % 5 / 5
+        LoadStroke.Color = Color3.fromHSV(hue, 1, 1)
+        task.wait()
+    end
+end)
+local LoadTitle = Instance.new("TextLabel", LoadingFrame)
+LoadTitle.Text = "Noticax v4" -- Mudei pra v4
+LoadTitle.Size = UDim2.new(1, 0, 0, 40)
+LoadTitle.BackgroundTransparency = 1
+LoadTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadTitle.Font = Enum.Font.GothamBlack
+LoadTitle.TextSize = 20
+local LoadStatus = Instance.new("TextLabel", LoadingFrame)
+LoadStatus.Text = "Carregando Recursos..."
+LoadStatus.Position = UDim2.new(0, 0, 0, 85)
+LoadStatus.Size = UDim2.new(1, 0, 0, 20)
+LoadStatus.BackgroundTransparency = 1
+LoadStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
+LoadStatus.Font = Enum.Font.Gotham
+LoadStatus.TextSize = 12
+local BarBack = Instance.new("Frame", LoadingFrame)
+BarBack.Size = UDim2.new(0, 180, 0, 6)
+BarBack.Position = UDim2.new(0, 20, 0, 60)
+BarBack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+BarBack.BorderSizePixel = 0
+Instance.new("UICorner", BarBack).CornerRadius = UDim.new(1, 0)
+local BarFill = Instance.new("Frame", BarBack)
+BarFill.Size = UDim2.new(0, 0, 1, 0) 
+BarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 255) 
+BarFill.BorderSizePixel = 0
+Instance.new("UICorner", BarFill).CornerRadius = UDim.new(1, 0)
 
--- [[ JANELA PRINCIPAL ]] --
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "JanelaManutencao"
-MainFrame.Parent = ScreenGui
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
--- MUDANÇA: Tamanho relativo (80% da largura, 50% da altura) para caber em qualquer celular
-MainFrame.Size = UDim2.new(0.85, 0, 0.55, 0) 
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+-- ==========================================
+-- 2. MENU PRINCIPAL (INTACTO)
+-- ==========================================
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Name = "OpenButton"
+ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleBtn.Position = UDim2.new(0.85, 0, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.Text = "M"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBlack
+ToggleBtn.TextSize = 18
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Visible = false 
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 10)
+local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
+ToggleStroke.Thickness = 2
+ToggleStroke.Color = Color3.fromRGB(0, 255, 255)
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 250, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -125, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = false 
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Bordas Arredondadas
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 16)
-Corner.Parent = MainFrame
-
--- Borda RGB Brilhante
-local Stroke = Instance.new("UIStroke")
-Stroke.Thickness = 3
-Stroke.Color = Color3.fromRGB(255, 255, 255)
-Stroke.Parent = MainFrame
-
--- [[ TEXTOS E CONTEÚDO ]] --
-
--- Título
-local Title = Instance.new("TextLabel")
-Title.Parent = MainFrame
-Title.BackgroundTransparency = 1
-Title.Position = UDim2.new(0, 0, 0.05, 0)
-Title.Size = UDim2.new(1, 0, 0.2, 0)
-Title.Font = Enum.Font.GothamBlack
-Title.Text = "NOTICAX v4"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextScaled = true -- Ajusta o texto automaticamente
-
--- Aviso
-local SubTitle = Instance.new("TextLabel")
-SubTitle.Parent = MainFrame
-SubTitle.BackgroundTransparency = 1
-SubTitle.Position = UDim2.new(0.05, 0, 0.25, 0)
-SubTitle.Size = UDim2.new(0.9, 0, 0.15, 0)
-SubTitle.Font = Enum.Font.GothamBold
-SubTitle.Text = "MANUTENÇÃO: NOVA OPÇÃO SECRETA"
-SubTitle.TextColor3 = Color3.fromRGB(255, 200, 50)
-SubTitle.TextScaled = true
-
--- Timer Gigante
-local TimerLabel = Instance.new("TextLabel")
-TimerLabel.Parent = MainFrame
-TimerLabel.BackgroundTransparency = 1
-TimerLabel.Position = UDim2.new(0, 0, 0.5, 0)
-TimerLabel.Size = UDim2.new(1, 0, 0.25, 0)
-TimerLabel.Font = Enum.Font.GothamBlack
-TimerLabel.Text = "24:00:00"
-TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TimerLabel.TextScaled = true
-
--- Ícone Carregando
-local LoadingIcon = Instance.new("ImageLabel")
-LoadingIcon.Parent = MainFrame
-LoadingIcon.BackgroundTransparency = 1
-LoadingIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-LoadingIcon.Position = UDim2.new(0.5, 0, 0.85, 0)
-LoadingIcon.Size = UDim2.new(0.15, 0, 0.15, 0) -- Tamanho proporcional
-LoadingIcon.Image = "rbxassetid://3570695787"
-LoadingIcon.ImageColor3 = Color3.new(1,1,1)
-
--- [[ ANIMAÇÕES ]] --
-
--- Girar ícone
-TweenService:Create(LoadingIcon, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360}):Play()
-
--- RGB Loop
-task.spawn(function()
-    local hue = 0
-    local TotalSeconds = 24 * 3600 -- 24 Horas
-    
-    while ScreenGui.Parent do -- Só roda se a GUI existir
-        hue = hue + 0.005
-        if hue > 1 then hue = 0 end
-        local color = Color3.fromHSV(hue, 0.8, 1)
-        
-        Stroke.Color = color
-        TimerLabel.TextColor3 = color
-        LoadingIcon.ImageColor3 = color
-        
-        -- Timer Falso
-        TotalSeconds = TotalSeconds - 0.03
-        local h = math.floor(TotalSeconds / 3600)
-        local m = math.floor((TotalSeconds % 3600) / 60)
-        local s = math.floor(TotalSeconds % 60)
-        TimerLabel.Text = string.format("%02d:%02d:%02d", h, m, s)
-        
-        task.wait(0.03)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Thickness = 3
+spawn(function()
+    while task.wait() do
+        local hue = tick() % 5 / 5
+        local color = Color3.fromHSV(hue, 1, 1)
+        MainStroke.Color = color
+        ToggleStroke.Color = color
     end
 end)
 
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "Noticax v4" -- Mudei pra v4
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 22
+
+local CloseX = Instance.new("TextButton", MainFrame)
+CloseX.Text = "X"
+CloseX.Size = UDim2.new(0, 30, 0, 30)
+CloseX.Position = UDim2.new(1, -35, 0, 2)
+CloseX.BackgroundTransparency = 1
+CloseX.TextColor3 = Color3.fromRGB(255, 50, 50)
+CloseX.Font = Enum.Font.GothamBold
+CloseX.TextSize = 16
+
+-- ABAS
+local TabFrame = Instance.new("Frame", MainFrame)
+TabFrame.Size = UDim2.new(1, -20, 0, 35)
+TabFrame.Position = UDim2.new(0, 10, 0, 40)
+TabFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", TabFrame).CornerRadius = UDim.new(0, 8)
+
+local FlyTabBtn = Instance.new("TextButton", TabFrame)
+FlyTabBtn.Text = "VOO"
+FlyTabBtn.Size = UDim2.new(0.33, 0, 1, 0)
+FlyTabBtn.BackgroundTransparency = 1
+FlyTabBtn.TextColor3 = Color3.fromRGB(0, 255, 255) 
+FlyTabBtn.Font = Enum.Font.GothamBold
+FlyTabBtn.TextSize = 12
+
+local SpeedTabBtn = Instance.new("TextButton", TabFrame)
+SpeedTabBtn.Text = "SPEED"
+SpeedTabBtn.Size = UDim2.new(0.33, 0, 1, 0)
+SpeedTabBtn.Position = UDim2.new(0.33, 0, 0, 0)
+SpeedTabBtn.BackgroundTransparency = 1
+SpeedTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+SpeedTabBtn.Font = Enum.Font.GothamBold
+SpeedTabBtn.TextSize = 12
+
+local EspTabBtn = Instance.new("TextButton", TabFrame)
+EspTabBtn.Text = "ESP/CLIP"
+EspTabBtn.Size = UDim2.new(0.33, 0, 1, 0)
+EspTabBtn.Position = UDim2.new(0.66, 0, 0, 0)
+EspTabBtn.BackgroundTransparency = 1
+EspTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+EspTabBtn.Font = Enum.Font.GothamBold
+EspTabBtn.TextSize = 12
+
+-- PAGINAS
+local PageFly = Instance.new("Frame", MainFrame)
+PageFly.Size = UDim2.new(1, 0, 0, 250)
+PageFly.Position = UDim2.new(0, 0, 0, 80)
+PageFly.BackgroundTransparency = 1
+PageFly.Visible = true
+
+local PageSpeed = Instance.new("Frame", MainFrame)
+PageSpeed.Size = UDim2.new(1, 0, 0, 250)
+PageSpeed.Position = UDim2.new(0, 0, 0, 80)
+PageSpeed.BackgroundTransparency = 1
+PageSpeed.Visible = false
+
+local PageEsp = Instance.new("Frame", MainFrame)
+PageEsp.Size = UDim2.new(1, 0, 0, 250)
+PageEsp.Position = UDim2.new(0, 0, 0, 80)
+PageEsp.BackgroundTransparency = 1
+PageEsp.Visible = false
+
+-- LÓGICA ABAS
+FlyTabBtn.MouseButton1Click:Connect(function()
+    PageFly.Visible = true; PageSpeed.Visible = false; PageEsp.Visible = false
+    FlyTabBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+    SpeedTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    EspTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+end)
+SpeedTabBtn.MouseButton1Click:Connect(function()
+    PageFly.Visible = false; PageSpeed.Visible = true; PageEsp.Visible = false
+    FlyTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    SpeedTabBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+    EspTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+end)
+EspTabBtn.MouseButton1Click:Connect(function()
+    PageFly.Visible = false; PageSpeed.Visible = false; PageEsp.Visible = true
+    FlyTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    SpeedTabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    EspTabBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+end)
+
+local function makeButton(parent, text, yPos, color)
+    local btn = Instance.new("TextButton", parent)
+    btn.Text = text
+    btn.Size = UDim2.new(0, 210, 0, 45)
+    btn.Position = UDim2.new(0, 20, 0, yPos)
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.AutoButtonColor = true
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    return btn
+end
+
+-- CONTEÚDOS (MANTIDOS)
+local FlyBtn = makeButton(PageFly, "ATIVAR VOO", 10, Color3.fromRGB(30, 30, 30))
+local FlyUp = makeButton(PageFly, "AUMENTAR VOO (+)", 65, Color3.fromRGB(0, 100, 50))
+local FlyDown = makeButton(PageFly, "DIMINUIR VOO (-)", 120, Color3.fromRGB(100, 0, 0))
+local FlyLabel = Instance.new("TextLabel", PageFly)
+FlyLabel.Text = "Velocidade Voo: " .. flySpeed
+FlyLabel.Size = UDim2.new(1, 0, 0, 30)
+FlyLabel.Position = UDim2.new(0, 0, 0, 170)
+FlyLabel.BackgroundTransparency = 1
+FlyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+FlyLabel.Font = Enum.Font.GothamBold
+
+local SpeedBtn = makeButton(PageSpeed, "ATIVAR SPEED", 10, Color3.fromRGB(30, 30, 30))
+local SpeedUpBtn = makeButton(PageSpeed, "MAIS RÁPIDO (+)", 65, Color3.fromRGB(0, 100, 50))
+local SpeedDownBtn = makeButton(PageSpeed, "MAIS LENTO (-)", 120, Color3.fromRGB(100, 0, 0))
+local SpeedLabel = Instance.new("TextLabel", PageSpeed)
+SpeedLabel.Text = "Velocidade Correr: " .. walkSpeed
+SpeedLabel.Size = UDim2.new(1, 0, 0, 30)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 170)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedLabel.Font = Enum.Font.GothamBold
+
+local EspLineBtn = makeButton(PageEsp, "LINHA BRANCA (OFF)", 10, Color3.fromRGB(30, 30, 30))
+local EspBoxBtn = makeButton(PageEsp, "CAIXA BOX (OFF)", 65, Color3.fromRGB(30, 30, 30))
+local EspNameBtn = makeButton(PageEsp, "NOMES (OFF)", 120, Color3.fromRGB(30, 30, 30))
+local NoclipBtn = makeButton(PageEsp, "NOCLIP (OFF)", 175, Color3.fromRGB(30, 30, 30)) 
+
+-- ==========================================
+-- LÓGICA GERAL
+-- ==========================================
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseX.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+
+-- NOCLIP
+RunService.Stepped:Connect(function()
+    if noclip then
+        local char = Player.Character
+        if char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+NoclipBtn.MouseButton1Click:Connect(function()
+    noclip = not noclip
+    if noclip then NoclipBtn.Text = "NOCLIP (ATIVADO)"; NoclipBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 255)
+    else NoclipBtn.Text = "NOCLIP (OFF)"; NoclipBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
+end)
+
+-- AURA & FLY
+local function createMegaAura(rootPart)
+    local att = Instance.new("Attachment", rootPart)
+    local p1 = Instance.new("ParticleEmitter", att)
+    p1.Texture = "rbxassetid://243098098"
+    p1.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 3), NumberSequenceKeypoint.new(1, 0)})
+    p1.Rate = 120; p1.Lifetime = NumberRange.new(0.5, 0.8); p1.Speed = NumberRange.new(2)
+    p1.Color = ColorSequence.new(Color3.fromRGB(0, 255, 255), Color3.fromRGB(0, 100, 255))
+    p1.LightEmission = 1; p1.Transparency = NumberSequence.new(0.3, 1)
+    return att
+end
+FlyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChild("Humanoid")
+    local animator = humanoid:FindFirstChild("Animator") or Instance.new("Animator", humanoid)
+    if not root or not humanoid then return end
+    if flying then
+        FlyBtn.Text = "GOD MODE (ON)"; FlyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        local anim = Instance.new("Animation"); anim.AnimationId = FLY_ANIM_ID
+        animTrack = animator:LoadAnimation(anim); animTrack.Priority = Enum.AnimationPriority.Action4
+        animTrack.Looped = true; animTrack:Play(0.5) 
+        activeParticles = createMegaAura(root)
+        bv = Instance.new("BodyVelocity", root); bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bg = Instance.new("BodyGyro", root); bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9); bg.P = 20000
+        spawn(function()
+            while flying and humanoid.Health > 0 do
+                local moveDir = humanoid.MoveDirection
+                local look = Camera.CFrame.LookVector
+                local right = Camera.CFrame.RightVector
+                bg.CFrame = Camera.CFrame
+                if moveDir.Magnitude > 0 then
+                    local flatLook = (look * Vector3.new(1,0,1)).Unit
+                    if flatLook.X ~= flatLook.X then flatLook = Vector3.new(0,0,-1) end
+                    local forwardStr = moveDir:Dot(flatLook)
+                    local sideStr = moveDir:Dot(right)
+                    local finalVel = (look * forwardStr + right * sideStr)
+                    bv.Velocity = finalVel * flySpeed
+                else
+                    bv.Velocity = Vector3.new(0,0,0)
+                end
+                task.wait()
+            end
+            if flying then flying = false; FlyBtn.Text = "ATIVAR VOO"; FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
+            if animTrack then animTrack:Stop(0.5); animTrack:Destroy() end
+            if activeParticles then activeParticles:Destroy() end
+            if bv then bv:Destroy() end
+            if bg then bg:Destroy() end
+        end)
+    else
+        FlyBtn.Text = "ATIVAR VOO"; FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        if animTrack then animTrack:Stop(0.5); animTrack:Destroy() end
+        if activeParticles then activeParticles:Destroy() end
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
+    end
+end)
+FlyUp.MouseButton1Click:Connect(function() flySpeed = flySpeed + 10; FlyLabel.Text = "Velocidade Voo: " .. flySpeed end)
+FlyDown.MouseButton1Click:Connect(function() flySpeed = math.max(10, flySpeed - 10); FlyLabel.Text = "Velocidade Voo: " .. flySpeed end)
+SpeedBtn.MouseButton1Click:Connect(function()
+    speeding = not speeding
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    local hum = char:FindFirstChild("Humanoid")
+    if speeding then
+        SpeedBtn.Text = "SPEED ATIVADO"; SpeedBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        spawn(function()
+            while speeding and hum and hum.Health > 0 do hum.WalkSpeed = walkSpeed; task.wait(0.1) end
+            if hum then hum.WalkSpeed = 16 end
+        end)
+    else
+        SpeedBtn.Text = "ATIVAR SPEED"; SpeedBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        if hum then hum.WalkSpeed = 16 end
+    end
+end)
+SpeedUpBtn.MouseButton1Click:Connect(function() walkSpeed = walkSpeed + 10; SpeedLabel.Text = "Velocidade Correr: " .. walkSpeed end)
+SpeedDownBtn.MouseButton1Click:Connect(function() walkSpeed = math.max(16, walkSpeed - 10); SpeedLabel.Text = "Velocidade Correr: " .. walkSpeed end)
+
+-- ==========================================
+-- SISTEMA DE ESP NATIVO (CORRIGIDO)
+-- ==========================================
+local function UpdateESP(plr)
+    if plr == Player then return end
+    
+    local function updater()
+        local char = plr.Character
+        if char then
+            -- 1. BOX
+            local hl = char:FindFirstChild("NoticaxHighlight")
+            if espBoxEnabled then
+                if not hl then 
+                    hl = Instance.new("Highlight", char)
+                    hl.Name = "NoticaxHighlight"
+                    hl.FillTransparency = 1
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                end
+            else 
+                if hl then hl:Destroy() end 
+            end
+            
+            -- 2. NAME
+            local head = char:FindFirstChild("Head")
+            local bgui = head and head:FindFirstChild("NoticaxName")
+            if espNameEnabled and head then
+                if not bgui then
+                    bgui = Instance.new("BillboardGui", head)
+                    bgui.Name = "NoticaxName"
+                    bgui.Size = UDim2.new(0, 200, 0, 50)
+                    bgui.StudsOffset = Vector3.new(0, 2, 0)
+                    bgui.AlwaysOnTop = true
+                    local txt = Instance.new("TextLabel", bgui)
+                    txt.Size = UDim2.new(1, 0, 1, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.Text = plr.Name
+                    txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    txt.TextStrokeTransparency = 0
+                    txt.Font = Enum.Font.GothamBold
+                    txt.TextSize = 14
+                end
+            else 
+                if bgui then bgui:Destroy() end 
+            end
+            
+            -- 3. LINES
+            local root = char:FindFirstChild("HumanoidRootPart")
+            local myRoot = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+            local beam = root and root:FindFirstChild("NoticaxBeam")
+            
+            if espLinesEnabled and root and myRoot then
+                if not beam then
+                    local attEnemy = Instance.new("Attachment", root)
+                    local attMe = myRoot:FindFirstChild("NoticaxAtt") or Instance.new("Attachment", myRoot)
+                    attMe.Name = "NoticaxAtt"
+                    
+                    beam = Instance.new("Beam", root)
+                    beam.Name = "NoticaxBeam"
+                    beam.Attachment0 = attMe
+                    beam.Attachment1 = attEnemy
+                    beam.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+                    beam.FaceCamera = true
+                    beam.Width0 = 0.1
+                    beam.Width1 = 0.1
+                end
+            else 
+                if beam then 
+                    if beam.Attachment1 then beam.Attachment1:Destroy() end
+                    beam:Destroy() 
+                end 
+            end
+        end
+    end
+    
+    spawn(function()
+        while plr.Parent do
+            updater()
+            task.wait()
+        end
+    end)
+end
+
+for _, p in pairs(Players:GetPlayers()) do UpdateESP(p) end
+Players.PlayerAdded:Connect(UpdateESP)
+
+EspBoxBtn.MouseButton1Click:Connect(function() espBoxEnabled = not espBoxEnabled; if espBoxEnabled then EspBoxBtn.Text = "CAIXA BOX (ON)"; EspBoxBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0) else EspBoxBtn.Text = "CAIXA BOX (OFF)"; EspBoxBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end end)
+EspNameBtn.MouseButton1Click:Connect(function() espNameEnabled = not espNameEnabled; if espNameEnabled then EspNameBtn.Text = "NOMES (ON)"; EspNameBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0) else EspNameBtn.Text = "NOMES (OFF)"; EspNameBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end end)
+EspLineBtn.MouseButton1Click:Connect(function() espLinesEnabled = not espLinesEnabled; if espLinesEnabled then EspLineBtn.Text = "LINHA BRANCA (ON)"; EspLineBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0) else EspLineBtn.Text = "LINHA BRANCA (OFF)"; EspLineBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end end)
+
+Player.CharacterAdded:Connect(function()
+    flying = false; speeding = false; noclip = false
+    FlyBtn.Text = "ATIVAR VOO"; SpeedBtn.Text = "ATIVAR SPEED"; NoclipBtn.Text = "NOCLIP (OFF)"; NoclipBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    if activeParticles then activeParticles:Destroy() end
+    if animTrack then animTrack:Stop(); animTrack:Destroy() end
+end)
+
+spawn(function()
+    LoadStatus.Text = "Iniciando Noticax v4..." -- Mensagem Loading
+    wait(0.5)
+    BarFill:TweenSize(UDim2.new(0.5, 0, 1, 0), "Out", "Quad", 1)
+    LoadStatus.Text = "Verificando Versão..."
+    wait(1)
+    BarFill:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 0.5)
+    LoadStatus.Text = "Sucesso!"
+    wait(0.5)
+    LoadingFrame:TweenPosition(UDim2.new(0.5, -110, 1.5, 0), "In", "Back", 1)
+    wait(1)
+    LoadingFrame:Destroy()
+    MainFrame.Visible = true; ToggleBtn.Visible = true
+end)
